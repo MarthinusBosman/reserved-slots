@@ -1,0 +1,15 @@
+{
+    "required": true,
+    "package": "com.reservedslots.mixin",
+    "compatibilityLevel": "JAVA_21",
+    "mixins": [
+        "PlayerInventoryMixin",
+        "ServerPlayerEntityMixin"
+    ],
+    "client": [
+        "HandledScreenMixin"
+    ],
+    "injectors": {
+        "defaultRequire": 1
+    }
+}

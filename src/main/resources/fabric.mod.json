@@ -1,0 +1,34 @@
+{
+    "schemaVersion": 1,
+    "id": "reservedslots",
+    "version": "${version}",
+    "name": "Reserved Slots",
+    "description": "Allows players to reserve and lock inventory slots for specific items",
+    "authors": [
+        "ReservedSlots Team"
+    ],
+    "contact": {
+        "homepage": "https://github.com/reservedslots/reserved-slots",
+        "sources": "https://github.com/reservedslots/reserved-slots"
+    },
+    "license": "MIT",
+    "icon": "assets/reservedslots/icon.png",
+    "environment": "*",
+    "entrypoints": {
+        "main": [
+            "com.reservedslots.ReservedSlotsMod"
+        ],
+        "client": [
+            "com.reservedslots.client.ClientInitializer"
+        ]
+    },
+    "mixins": [
+        "reservedslots.mixins.json"
+    ],
+    "depends": {
+        "fabricloader": ">=0.16.0",
+        "minecraft": "~1.21.1",
+        "java": ">=21",
+        "fabric-api": "*"
+    }
+}
