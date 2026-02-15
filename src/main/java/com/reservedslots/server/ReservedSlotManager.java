@@ -84,37 +84,131 @@ public class ReservedSlotManager {
     }
 
     /**
-     * Finds the best slot for inserting an item, considering reserved slots.
+     * Finds the best slot for inserting an item, considering reserved/locked slots.
      * Returns -1 if no suitable slot is found.
+     * 
+     * Priority order:
+     * 1. Stack with existing items in locked slots (if matching)
+     * 2. Stack with existing items in reserved slots (if matching)
+     * 3. Stack with existing items in normal slots
+     * 4. Empty locked slot (if matching)
+     * 5. Empty reserved slot (if matching)
+     * 6. Empty normal slot
+     * 7. Empty reserved slot (fallback for non-matching items when no normal slots)
      */
     public static int findBestSlotForItem(PlayerEntity player, ItemStack stack) {
         UUID playerId = player.getUuid();
         Map<Integer, ReservedSlotData> slots = playerData.get(playerId);
         
-        if (slots == null) {
-            return -1; // Use default behavior
-        }
-
-        // First pass: try to find a reserved or locked slot for this item
-        for (int i = 0; i < 36; i++) { // Only main inventory, not armor/offhand
-            ReservedSlotData data = slots.get(i);
-            if (data != null && (data.getState() == SlotState.RESERVED || data.getState() == SlotState.LOCKED) && data.matches(stack)) {
-                ItemStack currentStack = player.getInventory().getStack(i);
-                if (currentStack.isEmpty()) {
-                    return i; // Empty reserved/locked slot
-                }
-                if (ItemStack.areItemsAndComponentsEqual(currentStack, stack) && 
-                    currentStack.getCount() < currentStack.getMaxCount()) {
-                    return i; // Can stack into reserved/locked slot
+        // Phase 1: Try to stack with existing items
+        // Priority: locked (matching) > reserved (matching) > normal
+        
+        // 1a. Stack into locked slots with matching items
+        if (slots != null) {
+            for (int i = 0; i < 36; i++) {
+                ReservedSlotData data = slots.get(i);
+                if (data != null && data.getState() == SlotState.LOCKED && data.matches(stack)) {
+                    ItemStack currentStack = player.getInventory().getStack(i);
+                    if (!currentStack.isEmpty() &&
+                        ItemStack.areItemsAndComponentsEqual(currentStack, stack) &&
+                        currentStack.getCount() < currentStack.getMaxCount()) {
+                        return i;
+                    }
                 }
             }
         }
-
-        return -1; // No reserved slot found, use default behavior
+        
+        // 1b. Stack into reserved slots with matching items
+        if (slots != null) {
+            for (int i = 0; i < 36; i++) {
+                ReservedSlotData data = slots.get(i);
+                if (data != null && data.getState() == SlotState.RESERVED && data.matches(stack)) {
+                    ItemStack currentStack = player.getInventory().getStack(i);
+                    if (!currentStack.isEmpty() &&
+                        ItemStack.areItemsAndComponentsEqual(currentStack, stack) &&
+                        currentStack.getCount() < currentStack.getMaxCount()) {
+                        return i;
+                    }
+                }
+            }
+        }
+        
+        // 1c. Stack into normal slots
+        for (int i = 0; i < 36; i++) {
+            ReservedSlotData data = slots != null ? slots.get(i) : null;
+            if (data == null || data.getState() == SlotState.NORMAL) {
+                ItemStack currentStack = player.getInventory().getStack(i);
+                if (!currentStack.isEmpty() &&
+                    ItemStack.areItemsAndComponentsEqual(currentStack, stack) &&
+                    currentStack.getCount() < currentStack.getMaxCount()) {
+                    return i;
+                }
+            }
+        }
+        
+        // Phase 2: Try to find empty slots
+        // Priority: locked (matching) > reserved (matching) > normal > reserved (fallback)
+        
+        // 2a. Empty locked slot for matching item
+        if (slots != null) {
+            for (int i = 0; i < 36; i++) {
+                ReservedSlotData data = slots.get(i);
+                if (data != null && data.getState() == SlotState.LOCKED && data.matches(stack)) {
+                    ItemStack currentStack = player.getInventory().getStack(i);
+                    if (currentStack.isEmpty()) {
+                        return i;
+                    }
+                }
+            }
+        }
+        
+        // 2b. Empty reserved slot for matching item
+        if (slots != null) {
+            for (int i = 0; i < 36; i++) {
+                ReservedSlotData data = slots.get(i);
+                if (data != null && data.getState() == SlotState.RESERVED && data.matches(stack)) {
+                    ItemStack currentStack = player.getInventory().getStack(i);
+                    if (currentStack.isEmpty()) {
+                        return i;
+                    }
+                }
+            }
+        }
+        
+        // 2c. Empty normal slot
+        for (int i = 0; i < 36; i++) {
+            ReservedSlotData data = slots != null ? slots.get(i) : null;
+            if (data == null || data.getState() == SlotState.NORMAL) {
+                ItemStack currentStack = player.getInventory().getStack(i);
+                if (currentStack.isEmpty()) {
+                    return i;
+                }
+            }
+        }
+        
+        // 2d. Empty reserved slot as fallback (non-matching item, no normal slots available)
+        if (slots != null) {
+            for (int i = 0; i < 36; i++) {
+                ReservedSlotData data = slots.get(i);
+                if (data != null && data.getState() == SlotState.RESERVED) {
+                    ItemStack currentStack = player.getInventory().getStack(i);
+                    if (currentStack.isEmpty()) {
+                        return i; // Fallback: use reserved slot for non-matching item
+                    }
+                }
+            }
+        }
+        
+        return -1; // No slot available
     }
 
     /**
      * Checks if a slot can accept an item.
+     * 
+     * Logic:
+     * - NORMAL: accepts any item
+     * - RESERVED: accepts matching items, or any item if no unreserved slots available
+     * - LOCKED: ONLY accepts matching items (strict enforcement)
      */
     public static boolean canSlotAcceptItem(PlayerEntity player, int slotIndex, ItemStack stack) {
         ReservedSlotData data = getSlotData(player.getUuid(), slotIndex);
@@ -123,14 +217,27 @@ public class ReservedSlotManager {
             case NORMAL:
                 return true; // Normal slots accept anything
             case RESERVED:
-                // Reserved slots accept matching items, or anything if inventory is full
-                return data.matches(stack);
+                // Reserved slots accept matching items
+                // OR any item if there are no unreserved empty slots available
+                if (data.matches(stack)) {
+                    return true;
+                }
+                // Check if inventory is full (excluding reserved/locked slots)
+                return isInventoryFullExcludingReserved(player);
             case LOCKED:
-                // Locked slots only accept their specific item
+                // Locked slots ONLY accept their specific item, no exceptions
                 return data.matches(stack);
             default:
                 return true;
         }
+    }
+
+    /**
+     * Checks if a slot is in NORMAL state (not reserved or locked).
+     */
+    public static boolean isNormalSlot(PlayerEntity player, int slotIndex) {
+        ReservedSlotData data = getSlotData(player.getUuid(), slotIndex);
+        return data.getState() == SlotState.NORMAL;
     }
 
     /**
