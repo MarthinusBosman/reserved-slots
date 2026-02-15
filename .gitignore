@@ -37,4 +37,4 @@ logs/
 *.log
 
 # example repo
-fabric-example**
+fabric-example-mod/**

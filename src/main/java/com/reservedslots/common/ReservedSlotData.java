@@ -85,12 +85,15 @@ public class ReservedSlotData {
      * Deserializes slot data from NBT.
      */
     public static ReservedSlotData fromNbt(NbtCompound nbt) {
-        SlotState state = SlotState.valueOf(nbt.getString("state"));
+        SlotState state = SlotState.valueOf(nbt.getString("state").orElse("UNLOCKED"));
         Item item = null;
         if (nbt.contains("item")) {
-            Identifier id = Identifier.tryParse(nbt.getString("item"));
-            if (id != null) {
-                item = Registries.ITEM.get(id);
+            String itemString = nbt.getString("item").orElse(null);
+            if (itemString != null) {
+                Identifier id = Identifier.tryParse(itemString);
+                if (id != null) {
+                    item = Registries.ITEM.get(id);
+                }
             }
         }
         return new ReservedSlotData(state, item);

@@ -45,23 +45,26 @@ public class ClientInitializer implements ClientModInitializer {
             ClientSlotDataCache.clear();
         });
         
+        // Create category during initialization, not as static field
+        KeyBinding.Category category = new KeyBinding.Category(Identifier.of("reservedslots", "reserved_slots"));
+        
         // Register keybinding
         toggleSlotKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
             "key.reservedslots.toggle",
             InputUtil.Type.KEYSYM,
             GLFW.GLFW_KEY_R,
-            "category.reservedslots"
+            category
         ));
         
-        ReservedSlotsMod.LOGGER.info("Keybinding registered: {} bound to key {}", toggleSlotKey.getTranslationKey(), toggleSlotKey.getBoundKeyTranslationKey());
+        ReservedSlotsMod.LOGGER.info("Keybinding registered successfully");
         
         // Register screen opening event to add keyboard handler
         ScreenEvents.AFTER_INIT.register((client, screen, scaledWidth, scaledHeight) -> {
             if (screen instanceof HandledScreen<?> handledScreen) {
                 ReservedSlotsMod.LOGGER.info("Registering keyboard handler for screen: {}", screen.getClass().getSimpleName());
-                ScreenKeyboardEvents.afterKeyPress(screen).register((scr, key, scancode, modifiers) -> {
+                ScreenKeyboardEvents.afterKeyPress(screen).register((scr, keyInput) -> {
                     // Check if the pressed key matches the bound keybinding
-                    if (toggleSlotKey.matchesKey(key, scancode)) {
+                    if (toggleSlotKey.matchesKey(keyInput)) {
                         ReservedSlotsMod.LOGGER.info("=== TOGGLE KEY PRESSED IN SCREEN ===");
                         handleToggleKeyInScreen(handledScreen);
                     }
@@ -82,7 +85,7 @@ public class ClientInitializer implements ClientModInitializer {
             }
         });
         
-        // Register HUD rendering for hotbar overlays
+        // Register HUD rendering for hotbar overlays (ghost items and lock icons)
         HudRenderCallback.EVENT.register((drawContext, tickDelta) -> {
             MinecraftClient client = MinecraftClient.getInstance();
             if (client.player != null && client.currentScreen == null) {
@@ -167,47 +170,28 @@ public class ClientInitializer implements ClientModInitializer {
                 // If slot is empty, draw ghost item with transparency
                 if (slot.getStack().isEmpty() && data.item != null) {
                     ItemStack ghostStack = new ItemStack(data.item);
-                    
-                    drawContext.getMatrices().push();
-                    drawContext.getMatrices().translate(0, 0, 100);
-                    
                     // Draw the item at full opacity first
                     drawContext.drawItem(ghostStack, x, y);
                     
-                    drawContext.getMatrices().pop();
-                    
-                    // Draw single black overlay at higher z-level to fade the item (no background darkening)
-                    drawContext.getMatrices().push();
-                    drawContext.getMatrices().translate(0, 0, 300);
-                    RenderSystem.enableBlend();
-                    RenderSystem.defaultBlendFunc();
+                    // Draw single black overlay to fade the item (no background darkening)
                     drawContext.fill(x, y, x + 16, y + 16, 0x99323232); // Single layer for ghost
-                    RenderSystem.disableBlend();
-                    drawContext.getMatrices().pop();
-                } else {
-                    // Darken the slot background only when there's an actual item
-                    drawContext.fill(x, y, x + 16, y + 16, 0x99323232);
                 }
+                // Don't draw any overlay when there's an actual item - let it show normally
                 
                 // Always draw lock icon for locked slots (must be above everything including ghost overlay)
                 if (data.state == com.reservedslots.common.SlotState.LOCKED) {
-                    drawContext.getMatrices().push();
-                    drawContext.getMatrices().translate(0, 0, 400);
-                    
                     // Draw a simple padlock shape
                     int lockX = x + 10;
                     int lockY = y + 1;
                     
                     // Lock body (small rectangle)
-                    drawContext.fill(lockX, lockY + 2, lockX + 5, lockY + 6, 0xFFFFFFFF);
-                    drawContext.fill(lockX + 1, lockY + 3, lockX + 4, lockY + 5, 0xFF000000);
+                    drawContext.fill(lockX, lockY + 2, lockX + 5, lockY + 6, 0xFF2A2A2A);
+                    drawContext.fill(lockX + 1, lockY + 3, lockX + 4, lockY + 5, 0xFF9E9E9E);
                     
                     // Lock shackle (U shape)
-                    drawContext.fill(lockX + 1, lockY, lockX + 2, lockY + 3, 0xFFFFFFFF);
-                    drawContext.fill(lockX + 3, lockY, lockX + 4, lockY + 3, 0xFFFFFFFF);
-                    drawContext.fill(lockX + 1, lockY, lockX + 4, lockY + 1, 0xFFFFFFFF);
-                    
-                    drawContext.getMatrices().pop();
+                    drawContext.fill(lockX + 1, lockY, lockX + 2, lockY + 3, 0xFF2A2A2A);
+                    drawContext.fill(lockX + 3, lockY, lockX + 4, lockY + 3, 0xFF2A2A2A);
+                    drawContext.fill(lockX + 1, lockY, lockX + 4, lockY + 1, 0xFF2A2A2A);
                 }
             }
         }
@@ -228,13 +212,6 @@ public class ClientInitializer implements ClientModInitializer {
         int x = screenWidth / 2 - 91; // Hotbar starts 91 pixels left of center
         int y = screenHeight - 22; // 22 pixels from bottom
         
-        // Push to higher z-level to render on top of vanilla hotbar
-        drawContext.getMatrices().push();
-        drawContext.getMatrices().translate(0, 0, 400);
-        
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
-        
         // Render overlays for first 9 slots (hotbar = inventory slots 0-8)
         for (int i = 0; i < 9; i++) {
             ClientSlotDataCache.CachedSlotData data = ClientSlotDataCache.getSlotData(i);
@@ -251,29 +228,18 @@ public class ClientInitializer implements ClientModInitializer {
                     // Draw the item
                     drawContext.drawItem(ghostStack, slotX, slotY);
                     
-                    // Draw single black overlay at MUCH higher z-level to fade the item (no background darkening)
-                    drawContext.getMatrices().push();
-                    drawContext.getMatrices().translate(0, 0, 500);
+                    // Draw single black overlay to fade the item (no background darkening)
                     drawContext.fill(slotX, slotY, slotX + 16, slotY + 16, 0x99161616); // Single layer for ghost
-                    drawContext.getMatrices().pop();
-                } else {
-                    // Darken the slot background only when there's an actual item
-                    drawContext.fill(slotX, slotY, slotX + 16, slotY + 16, 0x99161616);
                 }
+                // Don't draw any overlay when there's an actual item - let it show normally
                 
                 // Draw lock icon for locked slots (must be above ghost overlay)
                 if (data.state == com.reservedslots.common.SlotState.LOCKED) {
-                    drawContext.getMatrices().push();
-                    drawContext.getMatrices().translate(0, 0, 501);
-                    // Draw white square with black center
-                    drawContext.fill(slotX + 11, slotY + 1, slotX + 15, slotY + 5, 0xFFFFFFFF);
-                    drawContext.fill(slotX + 12, slotY + 2, slotX + 14, slotY + 4, 0xFF000000);
-                    drawContext.getMatrices().pop();
+                    // Draw white square for lock with black center
+                    drawContext.fill(slotX + 11, slotY + 1, slotX + 15, slotY + 5, 0xFF2A2A2A);
+                    drawContext.fill(slotX + 12, slotY + 2, slotX + 14, slotY + 4, 0xFF9E9E9E);
                 }
             }
         }
-        
-        RenderSystem.disableBlend();
-        drawContext.getMatrices().pop();
     }
 }

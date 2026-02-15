@@ -6,10 +6,15 @@ import com.reservedslots.common.SlotState;
 import com.reservedslots.network.ReservedSlotPackets;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
+import com.mojang.serialization.Codec;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
+import net.minecraft.nbt.NbtOps;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.storage.ReadView;
+import net.minecraft.storage.WriteView;
+import net.minecraft.util.dynamic.Codecs;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -22,6 +27,17 @@ import java.util.UUID;
 public class ReservedSlotManager {
     private static final String NBT_KEY = "ReservedSlots";
     private static final int PLAYER_INVENTORY_SIZE = 41; // 36 inventory + 4 armor + 1 offhand
+    
+    // Codec for NbtList (list of NbtElements)
+    private static final Codec<NbtList> NBT_LIST_CODEC = Codecs.NBT_ELEMENT.listOf().xmap(
+        elements -> {
+            NbtList list = new NbtList();
+            elements.forEach(list::add);
+            return list;
+        },
+        list -> java.util.stream.StreamSupport.stream(list.spliterator(), false)
+            .collect(java.util.stream.Collectors.toList())
+    );
 
     // Per-player slot data (UUID -> slot index -> ReservedSlotData)
     // This is per-world automatically since each world loads from separate player NBT files
@@ -263,7 +279,7 @@ public class ReservedSlotManager {
     }
 
     /**
-     * Loads player data from NBT.
+     * Loads player data from storage.
      */
     public static void loadPlayerData(ServerPlayerEntity player, NbtCompound nbt) {
         UUID playerId = player.getUuid();
@@ -271,31 +287,46 @@ public class ReservedSlotManager {
         // Always clear existing data first to ensure we start fresh for this world
         playerData.remove(playerId);
         
-        if (nbt.contains(NBT_KEY, NbtElement.LIST_TYPE)) {
-            NbtList list = nbt.getList(NBT_KEY, NbtElement.COMPOUND_TYPE);
-            Map<Integer, ReservedSlotData> slots = new HashMap<>();
-            
-            for (int i = 0; i < list.size(); i++) {
-                NbtCompound slotNbt = list.getCompound(i);
-                int index = slotNbt.getInt("index");
-                ReservedSlotData data = ReservedSlotData.fromNbt(slotNbt.getCompound("data"));
-                slots.put(index, data);
-            }
-            
-            playerData.put(playerId, slots);
-            ReservedSlotsMod.LOGGER.info("Loaded {} reserved slots for player {}", 
-                slots.size(), player.getName().getString());
-        } else {
+        // Get the NBT list from the compound
+        var listOpt = nbt.getList(NBT_KEY);
+        if (listOpt.isEmpty()) {
             ReservedSlotsMod.LOGGER.info("No reserved slots found for player {} (new world or no saved data)", 
                 player.getName().getString());
+            return;
         }
+        
+        NbtList list = listOpt.get();
+        Map<Integer, ReservedSlotData> slots = new HashMap<>();
+        
+        for (int i = 0; i < list.size(); i++) {
+            var slotNbtOpt = list.getCompound(i);
+            if (slotNbtOpt.isEmpty()) continue;
+            
+            NbtCompound slotNbt = slotNbtOpt.get();
+            var indexOpt = slotNbt.getInt("index");
+            if (indexOpt.isEmpty()) continue;
+            
+            int index = indexOpt.get();
+            if (index >= 0) {
+                var dataNbtOpt = slotNbt.getCompound("data");
+                if (dataNbtOpt.isEmpty()) continue;
+                
+                NbtCompound dataNbt = dataNbtOpt.get();
+                ReservedSlotData data = ReservedSlotData.fromNbt(dataNbt);
+                slots.put(index, data);
+            }
+        }
+        
+        playerData.put(playerId, slots);
+        ReservedSlotsMod.LOGGER.info("Loaded {} reserved slots for player {}", 
+            slots.size(), player.getName().getString());
         
         // Note: Don't sync here - player's network handler isn't ready yet
         // Sync will happen in ServerPlayConnectionEvents.JOIN
     }
 
     /**
-     * Saves player data to NBT.
+     * Saves player data to storage.
      */
     public static void savePlayerData(ServerPlayerEntity player, NbtCompound nbt) {
         Map<Integer, ReservedSlotData> slots = playerData.get(player.getUuid());
@@ -316,6 +347,7 @@ public class ReservedSlotManager {
             }
         }
         
+        // Save the list to the NBT compound
         nbt.put(NBT_KEY, list);
     }
 
