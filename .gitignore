@@ -35,3 +35,6 @@ Thumbs.db
 # Logs
 logs/
 *.log
+
+# example repo
+fabric-example**
