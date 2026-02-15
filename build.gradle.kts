@@ -1,6 +1,7 @@
 plugins {
     id("fabric-loom") version "1.8.11"
     id("maven-publish")
+    id("com.modrinth.minotaur") version "2.+"
     java
 }
 
@@ -45,4 +46,18 @@ java {
     withSourcesJar()
     sourceCompatibility = JavaVersion.VERSION_21
     targetCompatibility = JavaVersion.VERSION_21
+}
+
+modrinth {
+    token.set(System.getenv("MODRINTH_TOKEN"))
+    projectId.set("reserved-slots")
+    versionNumber.set(project.version as String)
+    versionType.set("release")
+    uploadFile.set(tasks.remapJar)
+    gameVersions.addAll("1.21.1")
+    loaders.addAll("fabric")
+    changelog.set("Release ${project.version}")
+    dependencies {
+        required.project("fabric-api")
+    }
 }
