@@ -2,7 +2,7 @@
 
 ## ✅ Implementation Complete
 
-The Reserved Slots Minecraft mod has been fully implemented for Minecraft 1.21.1 using Fabric.
+The Reserved Slots Minecraft mod has been fully implemented for Minecraft 26.1 using Fabric.
 
 ## Project Structure
 
@@ -127,10 +127,10 @@ cd c:\Repos\personal\reserved-slots
 
 ## Dependencies
 
-- Minecraft 1.21.1
+- Minecraft 26.1
 - Fabric Loader 0.16.5+
-- Fabric API 0.105.0+1.21.1
-- Java 21+
+- Fabric API 0.105.0+26.1
+- Java 25+
 
 ## License
 

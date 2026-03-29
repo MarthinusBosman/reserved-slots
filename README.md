@@ -56,13 +56,13 @@ Your reserved slot configurations are saved with each world - different worlds c
 2. Install [Fabric API](https://modrinth.com/mod/fabric-api)
 3. Download Reserved Slots from [Releases](../../releases)
 4. Place the `.jar` file in your `mods` folder
-5. Launch Minecraft 1.21.1!
+5. Launch Minecraft 26.1!
 
 ---
 
 ## 🔧 Technical Information
 
-- **Minecraft Version:** 1.21.1
+- **Minecraft Version:** 26.1
 - **Mod Loader:** Fabric
 - **Required Dependencies:** Fabric API 0.105.0+
 - **Side:** Client & Server (works in single-player and multiplayer)

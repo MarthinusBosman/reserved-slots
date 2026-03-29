@@ -1,6 +1,6 @@
 # Testing the Reserved Slots Mod
 
-This guide will walk you through building and testing the Reserved Slots mod for Minecraft 1.21.1.
+This guide will walk you through building and testing the Reserved Slots mod for Minecraft 26.1.
 
 ## Prerequisites
 
@@ -19,17 +19,17 @@ cd c:\Repos\personal\reserved-slots
 
 ### Step 2: Build the Mod
 
-**Recommended**: Use the build script (automatically handles Java 21):
+**Recommended**: Use the build script (automatically handles Java 25):
 ```powershell
 .\build-mod.ps1
 ```
 
-**Alternative**: If you have Java 21 installed and configured:
+**Alternative**: If you have Java 25 installed and configured:
 ```powershell
 .\gradlew build
 ```
 
-**Note**: The mod requires Java 21 to build. If you encounter Java version errors, use `build-mod.ps1` which automatically downloads and uses Java 21.
+**Note**: The mod requires Java 25 to build. If you encounter Java version errors, use `build-mod.ps1` which automatically downloads and uses Java 25.
 
 This will:
 - Download all dependencies (Minecraft, Fabric Loader, Fabric API)
@@ -70,13 +70,13 @@ To test in a server environment:
 
 1. Download Fabric Installer from: https://fabricmc.net/use/installer/
 2. Run the installer
-3. Select Minecraft version **1.21.1**
+3. Select Minecraft version **26.1**
 4. Click "Install"
 
 ### Step 2: Install Fabric API
 
 1. Download Fabric API from: https://modrinth.com/mod/fabric-api
-2. Make sure to get version **0.105.0+1.21.1** or compatible
+2. Make sure to get version **0.105.0+26.1** or compatible
 3. Place the JAR in your `.minecraft/mods` folder
 
 ### Step 3: Install the Reserved Slots Mod
@@ -178,7 +178,7 @@ To test in a server environment:
 ### Build Fails
 
 - **Error: Java version mismatch**
-  - Ensure you have JDK 21 installed: `java -version`
+  - Ensure you have JDK 25 installed: `java -version`
   - Set JAVA_HOME if needed
 
 - **Error: Cannot resolve dependencies**
@@ -187,7 +187,7 @@ To test in a server environment:
 
 ### Mod Doesn't Load
 
-- Verify Fabric Loader is installed for Minecraft 1.21.1
+- Verify Fabric Loader is installed for Minecraft 26.1
 - Verify Fabric API is installed and compatible
 - Check `logs/latest.log` for error messages
 
