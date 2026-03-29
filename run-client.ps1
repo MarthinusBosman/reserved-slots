@@ -36,6 +36,8 @@ $logFile = "$logsDir\client_$timestamp.log"
 Write-Host "Logging to: $logFile" -ForegroundColor Yellow
 
 # Run Gradle and save output to log file
+# Use Continue so Gradle's stderr warnings don't terminate the script
+$ErrorActionPreference = "Continue"
 & "$PSScriptRoot\gradlew.bat" runClient 2>&1 | Tee-Object -FilePath $logFile
 
 if ($LASTEXITCODE -eq 0) {

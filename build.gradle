@@ -62,7 +62,7 @@ modrinth {
     uploadFile = tasks.jar
     gameVersions.add("26.1")
     loaders.add("fabric")
-    changelog = "Release ${project.version}"
+    changelog = System.getenv("CHANGELOG") ?: "Release ${project.version}"
     dependencies {
         required.project("fabric-api")
     }

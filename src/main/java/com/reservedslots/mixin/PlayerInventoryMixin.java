@@ -58,7 +58,7 @@ public abstract class PlayerInventoryMixin {
                 int toAdd = Math.min(stack.getCount(), currentStack.getMaxStackSize() - currentStack.getCount());
                 currentStack.grow(toAdd);
                 stack.shrink(toAdd);
-                cir.setReturnValue(!stack.isEmpty()); // Return false if more items remain
+                cir.setReturnValue(true); // Items were successfully added; triggers pickup sound/animation
                 return;
             }
         }

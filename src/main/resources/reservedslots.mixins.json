@@ -3,6 +3,7 @@
     "package": "com.reservedslots.mixin",
     "compatibilityLevel": "JAVA_25",
     "mixins": [
+        "ContainerMenuMixin",
         "PlayerInventoryMixin"
     ],
     "client": [

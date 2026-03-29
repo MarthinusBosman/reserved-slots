@@ -98,7 +98,7 @@ public class ReservedSlotManager {
     public static int findBestSlotForItem(Player player, ItemStack stack) {
         UUID playerId = player.getUUID();
         Map<Integer, ReservedSlotData> slots = playerData.get(playerId);
-        
+
         // Phase 1: Try to stack with existing items
         // Priority: locked (matching) > reserved (matching) > normal
         
