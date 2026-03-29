@@ -2,9 +2,9 @@ package com.reservedslots.network;
 
 import com.reservedslots.ReservedSlotsMod;
 import com.reservedslots.common.SlotState;
-import net.minecraft.item.Item;
-import net.minecraft.registry.Registries;
-import net.minecraft.util.Identifier;
+import net.minecraft.world.item.Item;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -26,7 +26,7 @@ public class ClientSlotDataCache {
     }
 
     public static void setSlotData(int slotIndex, SlotState state, Identifier itemId) {
-        Item item = Registries.ITEM.get(itemId);
+        Item item = BuiltInRegistries.ITEM.getValue(itemId);
         slotData.put(slotIndex, new CachedSlotData(state, item));
         ReservedSlotsMod.LOGGER.info("ClientSlotDataCache: Set slot {} to state {} with item {}", slotIndex, state, itemId);
     }

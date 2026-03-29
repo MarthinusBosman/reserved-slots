@@ -1,6 +1,6 @@
 package com.reservedslots.client;
 
-import net.minecraft.screen.slot.Slot;
+import net.minecraft.world.inventory.Slot;
 
 /**
  * Accessor interface for HandledScreen to access private fields.

@@ -14,6 +14,6 @@ I want to develop a minecraft (java edition) mod that allows users to reserve sl
 
 ## Technical Implementation
 
-- The mod should be developed for Minecraft 1.21.11.
+- The mod should be developed for Minecraft 26.1.
 - The mod should use the Fabric mod loader.
 - The mod should use the Fabric API.

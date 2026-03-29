@@ -1,5 +1,5 @@
 plugins {
-    id 'net.fabricmc.fabric-loom-remap' version '1.14-SNAPSHOT'
+    id 'net.fabricmc.fabric-loom' version '1.15-SNAPSHOT'
     id 'maven-publish'
     id 'com.modrinth.minotaur' version '2.+'
 }
@@ -27,11 +27,8 @@ loom {
 
 dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
-    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-    modImplementation("net.fabricmc.fabric-api:fabric-api:${project.fabric_version}") {
-        // Fabric API should include all modules
-    }
+    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 }
 
 processResources {
@@ -42,7 +39,7 @@ processResources {
 }
 
 tasks.withType(JavaCompile).configureEach {
-    it.options.release = 21
+    it.options.release = 25
 }
 
 jar {
@@ -53,8 +50,8 @@ jar {
 
 java {
     withSourcesJar()
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
 }
 
 modrinth {
@@ -62,8 +59,8 @@ modrinth {
     projectId = "reserved-slots"
     versionNumber = project.version as String
     versionType = "release"
-    uploadFile = tasks.remapJar
-    gameVersions.add("1.21.11")
+    uploadFile = tasks.jar
+    gameVersions.add("26.1")
     loaders.add("fabric")
     changelog = "Release ${project.version}"
     dependencies {

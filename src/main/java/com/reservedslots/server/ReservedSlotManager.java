@@ -4,17 +4,11 @@ import com.reservedslots.ReservedSlotsMod;
 import com.reservedslots.common.ReservedSlotData;
 import com.reservedslots.common.SlotState;
 import com.reservedslots.network.ReservedSlotPackets;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import com.mojang.serialization.Codec;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtElement;
-import net.minecraft.nbt.NbtList;
-import net.minecraft.nbt.NbtOps;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.storage.ReadView;
-import net.minecraft.storage.WriteView;
-import net.minecraft.util.dynamic.Codecs;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.server.level.ServerPlayer;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -27,17 +21,6 @@ import java.util.UUID;
 public class ReservedSlotManager {
     private static final String NBT_KEY = "ReservedSlots";
     private static final int PLAYER_INVENTORY_SIZE = 41; // 36 inventory + 4 armor + 1 offhand
-    
-    // Codec for NbtList (list of NbtElements)
-    private static final Codec<NbtList> NBT_LIST_CODEC = Codecs.NBT_ELEMENT.listOf().xmap(
-        elements -> {
-            NbtList list = new NbtList();
-            elements.forEach(list::add);
-            return list;
-        },
-        list -> java.util.stream.StreamSupport.stream(list.spliterator(), false)
-            .collect(java.util.stream.Collectors.toList())
-    );
 
     // Per-player slot data (UUID -> slot index -> ReservedSlotData)
     // This is per-world automatically since each world loads from separate player NBT files
@@ -55,8 +38,8 @@ public class ReservedSlotManager {
     /**
      * Gets the slot data for a specific player and slot index (with player context).
      */
-    public static ReservedSlotData getSlotData(PlayerEntity player, int slotIndex) {
-        return getSlotData(player.getUuid(), slotIndex);
+    public static ReservedSlotData getSlotData(Player player, int slotIndex) {
+        return getSlotData(player.getUUID(), slotIndex);
     }
 
     /**
@@ -71,12 +54,12 @@ public class ReservedSlotManager {
     /**
      * Toggles the state of a slot (NORMAL -> RESERVED -> LOCKED -> NORMAL).
      */
-    public static void toggleSlot(ServerPlayerEntity player, int slotIndex) {
+    public static void toggleSlot(ServerPlayer player, int slotIndex) {
         ReservedSlotsMod.LOGGER.info("toggleSlot called for player {} slot {}", player.getName().getString(), slotIndex);
         
-        ReservedSlotData slotData = getSlotData(player.getUuid(), slotIndex);
+        ReservedSlotData slotData = getSlotData(player.getUUID(), slotIndex);
         
-        ItemStack stack = player.getInventory().getStack(slotIndex);
+        ItemStack stack = player.getInventory().getItem(slotIndex);
         ReservedSlotsMod.LOGGER.info("Current slot state: {}, has item: {}", slotData.getState(), !stack.isEmpty());
         
         // Only allow toggling if there's an item in the slot (for NORMAL->RESERVED transition)
@@ -87,7 +70,7 @@ public class ReservedSlotManager {
         }
         
         slotData.cycleState(stack.getItem());
-        setSlotData(player.getUuid(), slotIndex, slotData);
+        setSlotData(player.getUUID(), slotIndex, slotData);
         
         ReservedSlotsMod.LOGGER.info("New slot state: {}", slotData.getState());
         
@@ -112,8 +95,8 @@ public class ReservedSlotManager {
      * 6. Empty normal slot
      * 7. Empty reserved slot (fallback for non-matching items when no normal slots)
      */
-    public static int findBestSlotForItem(PlayerEntity player, ItemStack stack) {
-        UUID playerId = player.getUuid();
+    public static int findBestSlotForItem(Player player, ItemStack stack) {
+        UUID playerId = player.getUUID();
         Map<Integer, ReservedSlotData> slots = playerData.get(playerId);
         
         // Phase 1: Try to stack with existing items
@@ -121,13 +104,13 @@ public class ReservedSlotManager {
         
         // 1a. Stack into locked slots with matching items
         if (slots != null) {
-            for (int i = 0; i < 36; i++) {
+            for (int i = 0; i < 41; i++) {
                 ReservedSlotData data = slots.get(i);
                 if (data != null && data.getState() == SlotState.LOCKED && data.matches(stack)) {
-                    ItemStack currentStack = player.getInventory().getStack(i);
+                    ItemStack currentStack = player.getInventory().getItem(i);
                     if (!currentStack.isEmpty() &&
-                        ItemStack.areItemsAndComponentsEqual(currentStack, stack) &&
-                        currentStack.getCount() < currentStack.getMaxCount()) {
+                        ItemStack.isSameItemSameComponents(currentStack, stack) &&
+                        currentStack.getCount() < currentStack.getMaxStackSize()) {
                         return i;
                     }
                 }
@@ -136,13 +119,13 @@ public class ReservedSlotManager {
         
         // 1b. Stack into reserved slots with matching items
         if (slots != null) {
-            for (int i = 0; i < 36; i++) {
+            for (int i = 0; i < 41; i++) {
                 ReservedSlotData data = slots.get(i);
                 if (data != null && data.getState() == SlotState.RESERVED && data.matches(stack)) {
-                    ItemStack currentStack = player.getInventory().getStack(i);
+                    ItemStack currentStack = player.getInventory().getItem(i);
                     if (!currentStack.isEmpty() &&
-                        ItemStack.areItemsAndComponentsEqual(currentStack, stack) &&
-                        currentStack.getCount() < currentStack.getMaxCount()) {
+                        ItemStack.isSameItemSameComponents(currentStack, stack) &&
+                        currentStack.getCount() < currentStack.getMaxStackSize()) {
                         return i;
                     }
                 }
@@ -153,10 +136,10 @@ public class ReservedSlotManager {
         for (int i = 0; i < 36; i++) {
             ReservedSlotData data = slots != null ? slots.get(i) : null;
             if (data == null || data.getState() == SlotState.NORMAL) {
-                ItemStack currentStack = player.getInventory().getStack(i);
+                ItemStack currentStack = player.getInventory().getItem(i);
                 if (!currentStack.isEmpty() &&
-                    ItemStack.areItemsAndComponentsEqual(currentStack, stack) &&
-                    currentStack.getCount() < currentStack.getMaxCount()) {
+                    ItemStack.isSameItemSameComponents(currentStack, stack) &&
+                    currentStack.getCount() < currentStack.getMaxStackSize()) {
                     return i;
                 }
             }
@@ -167,10 +150,10 @@ public class ReservedSlotManager {
         
         // 2a. Empty locked slot for matching item
         if (slots != null) {
-            for (int i = 0; i < 36; i++) {
+            for (int i = 0; i < 41; i++) {
                 ReservedSlotData data = slots.get(i);
                 if (data != null && data.getState() == SlotState.LOCKED && data.matches(stack)) {
-                    ItemStack currentStack = player.getInventory().getStack(i);
+                    ItemStack currentStack = player.getInventory().getItem(i);
                     if (currentStack.isEmpty()) {
                         return i;
                     }
@@ -180,10 +163,10 @@ public class ReservedSlotManager {
         
         // 2b. Empty reserved slot for matching item
         if (slots != null) {
-            for (int i = 0; i < 36; i++) {
+            for (int i = 0; i < 41; i++) {
                 ReservedSlotData data = slots.get(i);
                 if (data != null && data.getState() == SlotState.RESERVED && data.matches(stack)) {
-                    ItemStack currentStack = player.getInventory().getStack(i);
+                    ItemStack currentStack = player.getInventory().getItem(i);
                     if (currentStack.isEmpty()) {
                         return i;
                     }
@@ -195,7 +178,7 @@ public class ReservedSlotManager {
         for (int i = 0; i < 36; i++) {
             ReservedSlotData data = slots != null ? slots.get(i) : null;
             if (data == null || data.getState() == SlotState.NORMAL) {
-                ItemStack currentStack = player.getInventory().getStack(i);
+                ItemStack currentStack = player.getInventory().getItem(i);
                 if (currentStack.isEmpty()) {
                     return i;
                 }
@@ -207,7 +190,7 @@ public class ReservedSlotManager {
             for (int i = 0; i < 36; i++) {
                 ReservedSlotData data = slots.get(i);
                 if (data != null && data.getState() == SlotState.RESERVED) {
-                    ItemStack currentStack = player.getInventory().getStack(i);
+                    ItemStack currentStack = player.getInventory().getItem(i);
                     if (currentStack.isEmpty()) {
                         return i; // Fallback: use reserved slot for non-matching item
                     }
@@ -226,8 +209,8 @@ public class ReservedSlotManager {
      * - RESERVED: accepts matching items, or any item if no unreserved slots available
      * - LOCKED: ONLY accepts matching items (strict enforcement)
      */
-    public static boolean canSlotAcceptItem(PlayerEntity player, int slotIndex, ItemStack stack) {
-        ReservedSlotData data = getSlotData(player.getUuid(), slotIndex);
+    public static boolean canSlotAcceptItem(Player player, int slotIndex, ItemStack stack) {
+        ReservedSlotData data = getSlotData(player.getUUID(), slotIndex);
         
         switch (data.getState()) {
             case NORMAL:
@@ -251,21 +234,21 @@ public class ReservedSlotManager {
     /**
      * Checks if a slot is in NORMAL state (not reserved or locked).
      */
-    public static boolean isNormalSlot(PlayerEntity player, int slotIndex) {
-        ReservedSlotData data = getSlotData(player.getUuid(), slotIndex);
+    public static boolean isNormalSlot(Player player, int slotIndex) {
+        ReservedSlotData data = getSlotData(player.getUUID(), slotIndex);
         return data.getState() == SlotState.NORMAL;
     }
 
     /**
      * Checks if inventory is full (excluding reserved/locked slots).
      */
-    public static boolean isInventoryFullExcludingReserved(PlayerEntity player) {
-        UUID playerId = player.getUuid();
+    public static boolean isInventoryFullExcludingReserved(Player player) {
+        UUID playerId = player.getUUID();
         Map<Integer, ReservedSlotData> slots = playerData.get(playerId);
         
         int availableSlots = 0;
         for (int i = 0; i < 36; i++) {
-            ItemStack stack = player.getInventory().getStack(i);
+            ItemStack stack = player.getInventory().getItem(i);
             if (stack.isEmpty()) {
                 // Check if this slot is locked
                 ReservedSlotData data = slots != null ? slots.get(i) : null;
@@ -281,8 +264,8 @@ public class ReservedSlotManager {
     /**
      * Loads player data from storage.
      */
-    public static void loadPlayerData(ServerPlayerEntity player, NbtCompound nbt) {
-        UUID playerId = player.getUuid();
+    public static void loadPlayerData(ServerPlayer player, CompoundTag nbt) {
+        UUID playerId = player.getUUID();
         
         // Always clear existing data first to ensure we start fresh for this world
         playerData.remove(playerId);
@@ -295,14 +278,14 @@ public class ReservedSlotManager {
             return;
         }
         
-        NbtList list = listOpt.get();
+        ListTag list = listOpt.get();
         Map<Integer, ReservedSlotData> slots = new HashMap<>();
         
         for (int i = 0; i < list.size(); i++) {
             var slotNbtOpt = list.getCompound(i);
             if (slotNbtOpt.isEmpty()) continue;
             
-            NbtCompound slotNbt = slotNbtOpt.get();
+            CompoundTag slotNbt = slotNbtOpt.get();
             var indexOpt = slotNbt.getInt("index");
             if (indexOpt.isEmpty()) continue;
             
@@ -311,7 +294,7 @@ public class ReservedSlotManager {
                 var dataNbtOpt = slotNbt.getCompound("data");
                 if (dataNbtOpt.isEmpty()) continue;
                 
-                NbtCompound dataNbt = dataNbtOpt.get();
+                CompoundTag dataNbt = dataNbtOpt.get();
                 ReservedSlotData data = ReservedSlotData.fromNbt(dataNbt);
                 slots.put(index, data);
             }
@@ -328,19 +311,19 @@ public class ReservedSlotManager {
     /**
      * Saves player data to storage.
      */
-    public static void savePlayerData(ServerPlayerEntity player, NbtCompound nbt) {
-        Map<Integer, ReservedSlotData> slots = playerData.get(player.getUuid());
+    public static void savePlayerData(ServerPlayer player, CompoundTag nbt) {
+        Map<Integer, ReservedSlotData> slots = playerData.get(player.getUUID());
         
         if (slots == null || slots.isEmpty()) {
             return;
         }
         
-        NbtList list = new NbtList();
+        ListTag list = new ListTag();
         
         for (Map.Entry<Integer, ReservedSlotData> entry : slots.entrySet()) {
             // Only save non-normal slots
             if (entry.getValue().getState() != SlotState.NORMAL) {
-                NbtCompound slotNbt = new NbtCompound();
+                CompoundTag slotNbt = new CompoundTag();
                 slotNbt.putInt("index", entry.getKey());
                 slotNbt.put("data", entry.getValue().toNbt());
                 list.add(slotNbt);
@@ -376,8 +359,8 @@ public class ReservedSlotManager {
     /**
      * Syncs all reserved slots to a player after they join.
      */
-    public static void syncToPlayer(ServerPlayerEntity player) {
-        Map<Integer, ReservedSlotData> slots = playerData.get(player.getUuid());
+    public static void syncToPlayer(ServerPlayer player) {
+        Map<Integer, ReservedSlotData> slots = playerData.get(player.getUUID());
         if (slots == null) {
             slots = new HashMap<>();
         }

@@ -28,7 +28,6 @@ loom {
 
 dependencies {
     minecraft("com.mojang:minecraft:${project.property("minecraft_version")}")
-    add("mappings", "net.fabricmc:yarn:${project.property("yarn_mappings")}:v2")
     implementation("net.fabricmc:fabric-loader:${project.property("loader_version")}")
     implementation("net.fabricmc.fabric-api:fabric-api:${project.property("fabric_version")}")
 }
@@ -65,7 +64,7 @@ modrinth {
     versionNumber.set(project.version as String)
     versionType.set("release")
     uploadFile.set(tasks.named("remapJar"))
-    gameVersions.addAll("1.21.11")
+    gameVersions.addAll("26.1")
     loaders.addAll("fabric")
     changelog.set("Release ${project.version}")
     dependencies {

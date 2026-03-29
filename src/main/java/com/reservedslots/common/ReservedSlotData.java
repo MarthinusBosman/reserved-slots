@@ -1,10 +1,10 @@
 package com.reservedslots.common;
 
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.registry.Registries;
-import net.minecraft.util.Identifier;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
 
 /**
  * Holds the state and reserved item for a single inventory slot.
@@ -71,11 +71,11 @@ public class ReservedSlotData {
     /**
      * Serializes this slot data to NBT.
      */
-    public NbtCompound toNbt() {
-        NbtCompound nbt = new NbtCompound();
+    public CompoundTag toNbt() {
+        CompoundTag nbt = new CompoundTag();
         nbt.putString("state", state.name());
         if (reservedItem != null) {
-            Identifier id = Registries.ITEM.getId(reservedItem);
+            Identifier id = BuiltInRegistries.ITEM.getKey(reservedItem);
             nbt.putString("item", id.toString());
         }
         return nbt;
@@ -84,7 +84,7 @@ public class ReservedSlotData {
     /**
      * Deserializes slot data from NBT.
      */
-    public static ReservedSlotData fromNbt(NbtCompound nbt) {
+    public static ReservedSlotData fromNbt(CompoundTag nbt) {
         SlotState state = SlotState.valueOf(nbt.getString("state").orElse("UNLOCKED"));
         Item item = null;
         if (nbt.contains("item")) {
@@ -92,7 +92,7 @@ public class ReservedSlotData {
             if (itemString != null) {
                 Identifier id = Identifier.tryParse(itemString);
                 if (id != null) {
-                    item = Registries.ITEM.get(id);
+                    item = BuiltInRegistries.ITEM.getValue(id);
                 }
             }
         }

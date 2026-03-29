@@ -1,10 +1,11 @@
 package com.reservedslots.server;
 
 import com.reservedslots.ReservedSlotsMod;
-import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtIo;
-import net.minecraft.nbt.NbtSizeTracker;
+import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.world.level.storage.LevelResource;
 
 import java.io.File;
 import java.io.IOException;
@@ -20,13 +21,12 @@ public class ReservedSlotsPersistentState {
     private static final String FILE_NAME = "reservedslots_data.dat";
     private static final Map<MinecraftServer, ReservedSlotsPersistentState> instances = new WeakHashMap<>();
     
-    private final Map<String, NbtCompound> playerData = new HashMap<>();
+    private final Map<String, CompoundTag> playerData = new HashMap<>();
     private final File saveFile;
 
     private ReservedSlotsPersistentState(MinecraftServer server) {
         // Get the world save directory - using session to get the correct path
-        File worldDir = server.getRunDirectory().resolve("saves").resolve(server.getSaveProperties().getLevelName()).toFile();
-        this.saveFile = new File(worldDir, FILE_NAME);
+        this.saveFile = server.getWorldPath(LevelResource.ROOT).resolve(FILE_NAME).toFile();
         load();
     }
 
@@ -48,15 +48,15 @@ public class ReservedSlotsPersistentState {
 
         try {
             ReservedSlotsMod.LOGGER.info("Reading saved data from file...");
-            NbtCompound nbt = NbtIo.readCompressed(saveFile.toPath(), NbtSizeTracker.ofUnlimitedBytes());
+            CompoundTag nbt = NbtIo.readCompressed(saveFile.toPath(), NbtAccounter.unlimitedHeap());
             
             var playersNbtOpt = nbt.getCompound("players");
             if (playersNbtOpt.isEmpty()) {
                 return;
             }
             
-            NbtCompound playersNbt = playersNbtOpt.get();
-            for (String playerName : playersNbt.getKeys()) {
+            CompoundTag playersNbt = playersNbtOpt.get();
+            for (String playerName : playersNbt.keySet()) {
                 var playerNbtOpt = playersNbt.getCompound(playerName);
                 if (playerNbtOpt.isPresent()) {
                     playerData.put(playerName, playerNbtOpt.get());
@@ -73,10 +73,10 @@ public class ReservedSlotsPersistentState {
         try {
             ReservedSlotsMod.LOGGER.info("Saving data to: {}", saveFile.getAbsolutePath());
             
-            NbtCompound nbt = new NbtCompound();
-            NbtCompound playersNbt = new NbtCompound();
+            CompoundTag nbt = new CompoundTag();
+            CompoundTag playersNbt = new CompoundTag();
             
-            for (Map.Entry<String, NbtCompound> entry : playerData.entrySet()) {
+            for (Map.Entry<String, CompoundTag> entry : playerData.entrySet()) {
                 playersNbt.put(entry.getKey(), entry.getValue());
             }
             
@@ -94,11 +94,11 @@ public class ReservedSlotsPersistentState {
         }
     }
 
-    public NbtCompound getPlayerData(String playerName) {
+    public CompoundTag getPlayerData(String playerName) {
         return playerData.get(playerName);
     }
 
-    public void setPlayerData(String playerName, NbtCompound data) {
+    public void setPlayerData(String playerName, CompoundTag data) {
         if (data == null || data.isEmpty()) {
             playerData.remove(playerName);
         } else {
