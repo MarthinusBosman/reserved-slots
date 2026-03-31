@@ -1,4 +1,4 @@
-# Automatically increments the patch version tag and pushes it after each commit.
+# Automatically increments the patch version tag and pushes it once per push to origin.
 
 $latestTag = git describe --tags --abbrev=0 2>$null
 if (-not $latestTag) {
