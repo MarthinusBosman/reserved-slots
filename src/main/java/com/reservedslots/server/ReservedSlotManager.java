@@ -80,10 +80,11 @@ public class ReservedSlotManager {
         ReservedSlotsMod.LOGGER.info("Current slot state: {}, has item: {}", slotData.getState(), !stack.isEmpty());
         
         // Only allow toggling if there's an item in the slot (for NORMAL->RESERVED transition)
-        // or if already in RESERVED/LOCKED state
-        if (slotData.getState() == SlotState.NORMAL && stack.isEmpty()) {
-            ReservedSlotsMod.LOGGER.info("Cannot reserve empty slot");
-            return; // Can't reserve an empty slot
+        // or if already in RESERVED/LOCKED state.
+        // Exception: armor (36-39) and offhand (40) slots can be reserved while empty.
+        if (slotData.getState() == SlotState.NORMAL && stack.isEmpty() && slotIndex < 36) {
+            ReservedSlotsMod.LOGGER.info("Cannot reserve empty main inventory slot");
+            return; // Can't reserve an empty main inventory slot
         }
         
         slotData.cycleState(stack.getItem());
@@ -115,11 +116,13 @@ public class ReservedSlotManager {
     public static int findBestSlotForItem(PlayerEntity player, ItemStack stack) {
         UUID playerId = player.getUuid();
         Map<Integer, ReservedSlotData> slots = playerData.get(playerId);
+
+        ReservedSlotsMod.LOGGER.info("[ReservedSlots] findBestSlotForItem: item={}", stack.getItem());
         
         // Phase 1: Try to stack with existing items
         // Priority: locked (matching) > reserved (matching) > normal
         
-        // 1a. Stack into locked slots with matching items
+        // 1a. Stack into locked slots with matching items (main inventory 0-35)
         if (slots != null) {
             for (int i = 0; i < 36; i++) {
                 ReservedSlotData data = slots.get(i);
@@ -128,13 +131,14 @@ public class ReservedSlotManager {
                     if (!currentStack.isEmpty() &&
                         ItemStack.areItemsAndComponentsEqual(currentStack, stack) &&
                         currentStack.getCount() < currentStack.getMaxCount()) {
+                        ReservedSlotsMod.LOGGER.info("[ReservedSlots] -> Stacking into LOCKED main slot {}", i);
                         return i;
                     }
                 }
             }
         }
-        
-        // 1b. Stack into reserved slots with matching items
+
+        // 1b. Stack into reserved slots with matching items (main inventory 0-35)
         if (slots != null) {
             for (int i = 0; i < 36; i++) {
                 ReservedSlotData data = slots.get(i);
@@ -143,6 +147,7 @@ public class ReservedSlotManager {
                     if (!currentStack.isEmpty() &&
                         ItemStack.areItemsAndComponentsEqual(currentStack, stack) &&
                         currentStack.getCount() < currentStack.getMaxCount()) {
+                        ReservedSlotsMod.LOGGER.info("[ReservedSlots] -> Stacking into RESERVED main slot {}", i);
                         return i;
                     }
                 }
@@ -165,26 +170,56 @@ public class ReservedSlotManager {
         // Phase 2: Try to find empty slots
         // Priority: locked (matching) > reserved (matching) > normal > reserved (fallback)
         
-        // 2a. Empty locked slot for matching item
+        // 2a. Empty locked slot for matching item (main inventory 0-35)
         if (slots != null) {
             for (int i = 0; i < 36; i++) {
                 ReservedSlotData data = slots.get(i);
                 if (data != null && data.getState() == SlotState.LOCKED && data.matches(stack)) {
                     ItemStack currentStack = player.getInventory().getStack(i);
                     if (currentStack.isEmpty()) {
+                        ReservedSlotsMod.LOGGER.info("[ReservedSlots] -> Empty LOCKED main slot {}", i);
+                        return i;
+                    }
+                }
+            }
+        }
+
+        // 2a-armor. Empty locked armor/offhand slot for matching item (indices 36-40)
+        if (slots != null) {
+            for (int i = 36; i <= 40; i++) {
+                ReservedSlotData data = slots.get(i);
+                if (data != null && data.getState() == SlotState.LOCKED && data.matches(stack)) {
+                    ItemStack currentStack = player.getInventory().getStack(i);
+                    if (currentStack.isEmpty()) {
+                        ReservedSlotsMod.LOGGER.info("[ReservedSlots] -> Empty LOCKED armor/offhand slot {}", i);
                         return i;
                     }
                 }
             }
         }
         
-        // 2b. Empty reserved slot for matching item
+        // 2b. Empty reserved slot for matching item (main inventory 0-35)
         if (slots != null) {
             for (int i = 0; i < 36; i++) {
                 ReservedSlotData data = slots.get(i);
                 if (data != null && data.getState() == SlotState.RESERVED && data.matches(stack)) {
                     ItemStack currentStack = player.getInventory().getStack(i);
                     if (currentStack.isEmpty()) {
+                        ReservedSlotsMod.LOGGER.info("[ReservedSlots] -> Empty RESERVED main slot {}", i);
+                        return i;
+                    }
+                }
+            }
+        }
+
+        // 2b-armor. Empty reserved armor/offhand slot for matching item (indices 36-40)
+        if (slots != null) {
+            for (int i = 36; i <= 40; i++) {
+                ReservedSlotData data = slots.get(i);
+                if (data != null && data.getState() == SlotState.RESERVED && data.matches(stack)) {
+                    ItemStack currentStack = player.getInventory().getStack(i);
+                    if (currentStack.isEmpty()) {
+                        ReservedSlotsMod.LOGGER.info("[ReservedSlots] -> Empty RESERVED armor/offhand slot {}", i);
                         return i;
                     }
                 }
@@ -209,12 +244,14 @@ public class ReservedSlotManager {
                 if (data != null && data.getState() == SlotState.RESERVED) {
                     ItemStack currentStack = player.getInventory().getStack(i);
                     if (currentStack.isEmpty()) {
+                        ReservedSlotsMod.LOGGER.info("[ReservedSlots] -> Fallback: empty RESERVED main slot {}", i);
                         return i; // Fallback: use reserved slot for non-matching item
                     }
                 }
             }
         }
-        
+
+        ReservedSlotsMod.LOGGER.info("[ReservedSlots] -> No slot found, inventory full");
         return -1; // No slot available
     }
 

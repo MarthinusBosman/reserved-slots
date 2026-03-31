@@ -2,6 +2,7 @@ package com.reservedslots.mixin;
 
 import com.reservedslots.client.HandledScreenAccessor;
 import com.reservedslots.network.ClientSlotDataCache;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.screen.slot.Slot;
@@ -46,6 +47,10 @@ public abstract class HandledScreenMixin implements HandledScreenAccessor {
      */
     @Inject(method = "drawSlot", at = @At("HEAD"))
     private void onDrawSlotStart(DrawContext context, Slot slot, int mouseX, int mouseY, CallbackInfo ci) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player == null || slot.inventory != client.player.getInventory()) {
+            return;
+        }
         ClientSlotDataCache.CachedSlotData data = ClientSlotDataCache.getSlotData(slot.getIndex());
         if (data != null && data.state != com.reservedslots.common.SlotState.NORMAL) {
             // Only draw background if there's an actual item (not for ghost items)

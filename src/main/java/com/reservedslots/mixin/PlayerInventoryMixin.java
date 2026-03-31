@@ -1,5 +1,6 @@
 package com.reservedslots.mixin;
 
+import com.reservedslots.ReservedSlotsMod;
 import com.reservedslots.server.ReservedSlotManager;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
@@ -50,6 +51,7 @@ public abstract class PlayerInventoryMixin {
                 // Empty slot - insert the item
                 setStack(targetSlot, stack.copy());
                 stack.setCount(0);
+                ReservedSlotsMod.LOGGER.info("[ReservedSlots] insertStack placed {} in empty slot {}", stack.getItem(), targetSlot);
                 cir.setReturnValue(true);
                 return;
             } else if (ItemStack.areItemsAndComponentsEqual(currentStack, stack) && 
@@ -58,11 +60,13 @@ public abstract class PlayerInventoryMixin {
                 int toAdd = Math.min(stack.getCount(), currentStack.getMaxCount() - currentStack.getCount());
                 currentStack.increment(toAdd);
                 stack.decrement(toAdd);
-                cir.setReturnValue(!stack.isEmpty()); // Return false if more items remain
+                ReservedSlotsMod.LOGGER.info("[ReservedSlots] insertStack stacked {} onto slot {} remaining={}", toAdd, targetSlot, stack.getCount());
+                cir.setReturnValue(stack.isEmpty()); // Return true if all items were consumed
                 return;
             }
         }
         
+        ReservedSlotsMod.LOGGER.info("[ReservedSlots] insertStack: no slot found for {}", stack.getItem());
         // No slot available - inventory is full
         cir.setReturnValue(false);
     }

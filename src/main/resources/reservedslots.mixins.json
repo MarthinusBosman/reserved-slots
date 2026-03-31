@@ -3,7 +3,8 @@
     "package": "com.reservedslots.mixin",
     "compatibilityLevel": "JAVA_21",
     "mixins": [
-        "PlayerInventoryMixin"
+        "PlayerInventoryMixin",
+        "ScreenHandlerMixin"
     ],
     "client": [
         "HandledScreenMixin",

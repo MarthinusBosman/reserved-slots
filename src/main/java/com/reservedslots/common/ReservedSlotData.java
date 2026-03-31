@@ -2,6 +2,7 @@ package com.reservedslots.common;
 
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
@@ -55,7 +56,8 @@ public class ReservedSlotData {
         switch (state) {
             case NORMAL:
                 state = SlotState.RESERVED;
-                reservedItem = currentItem;
+                // AIR means the slot was empty when reserved (e.g. empty armor/offhand slot)
+                reservedItem = (currentItem == null || currentItem == Items.AIR) ? null : currentItem;
                 break;
             case RESERVED:
                 state = SlotState.LOCKED;

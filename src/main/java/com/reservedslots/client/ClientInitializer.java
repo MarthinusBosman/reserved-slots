@@ -175,8 +175,10 @@ public class ClientInitializer implements ClientModInitializer {
                     
                     // Draw single black overlay to fade the item (no background darkening)
                     drawContext.fill(x, y, x + 16, y + 16, 0x99323232); // Single layer for ghost
+                } else if (slot.getStack().isEmpty() && data.item == null) {
+                    // Reserved without a specific item type (e.g. empty armor/offhand slot)
+                    drawContext.fill(x, y, x + 16, y + 16, 0x5500AA00); // Subtle green tint
                 }
-                // Don't draw any overlay when there's an actual item - let it show normally
                 
                 // Always draw lock icon for locked slots (must be above everything including ghost overlay)
                 if (data.state == com.reservedslots.common.SlotState.LOCKED) {

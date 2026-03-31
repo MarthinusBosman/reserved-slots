@@ -27,7 +27,8 @@ public class ClientSlotDataCache {
 
     public static void setSlotData(int slotIndex, SlotState state, Identifier itemId) {
         Item item = Registries.ITEM.get(itemId);
-        slotData.put(slotIndex, new CachedSlotData(state, item));
+        // Store null for air - means "reserved without specific item type" (no ghost rendered)
+        slotData.put(slotIndex, new CachedSlotData(state, item == net.minecraft.item.Items.AIR ? null : item));
         ReservedSlotsMod.LOGGER.info("ClientSlotDataCache: Set slot {} to state {} with item {}", slotIndex, state, itemId);
     }
 
