@@ -71,7 +71,7 @@ modrinth {
     gameVersions.addAll("26.1")
     loaders.addAll("fabric")
     changelog.set(System.getenv("CHANGELOG") ?: "Release ${project.version}")
-    syncBodyFrom.set(rootProject.file("README.md").readText())
+    syncBodyFrom.set(rootProject.file("README.md"))
     dependencies {
         required.project("fabric-api")
     }
