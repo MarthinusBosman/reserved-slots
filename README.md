@@ -23,7 +23,13 @@ Lock a slot to make it exclusively for a specific item type - no other items can
 ### 🎮 Smart Item Routing
 Items automatically route to their reserved slots when picked up. No more manually organizing your inventory after every mining trip!
 
-### 💾 Per-World Persistence
+### � Pickup to Inventory
+An optional mode that changes how new items fill your inventory. When enabled, items go to your main inventory slots (rows 2–4) first before filling the hotbar, keeping your hotbar clean and intentional. Toggle this in the mod settings screen.
+
+### 🌐 Server Compatibility Check
+When you join a world or server, the mod automatically checks whether the server also has Reserved Slots installed. If the server does not have the mod, the client disables all slot-reservation logic for that session and notifies you in chat - so you can safely install the mod client-side without any issues on vanilla or modded servers that don't run it.
+
+### �💾 Per-World Persistence
 Your reserved slot configurations are saved with each world - different worlds can have different setups.
 
 ---
@@ -44,9 +50,16 @@ Your reserved slot configurations are saved with each world - different worlds c
 ### Removing Reservation
 - Press **R** a third time to cycle back to normal
 
-### Keybinding
-- Default: **R** key
-- Customize in: **Options → Controls → Reserved Slots**
+### Mod Settings
+Press the **Open Reserved Slots Settings** keybind (unbound by default; assign one in **Options → Controls → Reserved Slots**) to open the settings screen where you can toggle **Pickup to Inventory** mode.
+
+### Keybindings
+| Action | Default |
+|---|---|
+| Toggle Reserved Slot | **R** |
+| Open Reserved Slots Settings | *(unbound)* |
+
+Customize in: **Options → Controls → Reserved Slots**
 
 ---
 
@@ -66,6 +79,7 @@ Your reserved slot configurations are saved with each world - different worlds c
 - **Mod Loader:** Fabric
 - **Required Dependencies:** Fabric API 0.105.0+
 - **Side:** Client & Server (works in single-player and multiplayer)
+- **Server required:** Yes — the mod must be installed on the server for slot reservations to persist. If the server does not have the mod, the client will automatically disable itself for that session.
 
 ---
 

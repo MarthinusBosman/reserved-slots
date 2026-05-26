@@ -52,6 +52,12 @@ jobs:
         run: ./gradlew modrinth
         env:
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          CHANGELOG: ${{ env.CHANGELOG }}
+
+      - name: Sync description to Modrinth
+        run: ./gradlew modrinthSyncBody
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

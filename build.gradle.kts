@@ -20,6 +20,10 @@ repositories {
         name = "Fabric"
         url = uri("https://maven.fabricmc.net/")
     }
+    maven {
+        name = "TerraformersMC"
+        url = uri("https://maven.terraformersmc.com/releases/")
+    }
 }
 
 loom {
@@ -30,6 +34,7 @@ dependencies {
     minecraft("com.mojang:minecraft:${project.property("minecraft_version")}")
     implementation("net.fabricmc:fabric-loader:${project.property("loader_version")}")
     implementation("net.fabricmc.fabric-api:fabric-api:${project.property("fabric_version")}")
+    implementation("com.terraformersmc:modmenu:18.0.0-beta.1")
 }
 
 tasks {
@@ -57,7 +62,6 @@ java {
     targetCompatibility = JavaVersion.VERSION_25
 }
 
-/*
 modrinth {
     token.set(System.getenv("MODRINTH_TOKEN"))
     projectId.set("reserved-slots")
@@ -66,9 +70,9 @@ modrinth {
     uploadFile.set(tasks.named("remapJar"))
     gameVersions.addAll("26.1")
     loaders.addAll("fabric")
-    changelog.set("Release ${project.version}")
+    changelog.set(System.getenv("CHANGELOG") ?: "Release ${project.version}")
+    syncBodyFrom.set(rootProject.file("README.md").readText())
     dependencies {
         required.project("fabric-api")
     }
 }
-*/

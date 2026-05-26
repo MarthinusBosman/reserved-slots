@@ -8,6 +8,7 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenKeyboardEvents;
@@ -15,6 +16,7 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -25,6 +27,7 @@ import org.lwjgl.glfw.GLFW;
  */
 public class ClientInitializer implements ClientModInitializer {
     private static KeyMapping toggleSlotKey;
+    private static KeyMapping openSettingsKey;
 
     @Override
     public void onInitializeClient() {
@@ -33,6 +36,22 @@ public class ClientInitializer implements ClientModInitializer {
         // Register network packets
         ReservedSlotPackets.registerClient();
         
+        // Check if server has the mod when joining a world
+        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
+            boolean hasMod = ClientPlayNetworking.canSend(ReservedSlotPackets.ToggleSlotPayload.ID);
+            ClientSlotDataCache.setServerHasMod(hasMod);
+            if (!hasMod) {
+                ReservedSlotsMod.LOGGER.info("Server does not have reserved-slots mod, disabling client logic");
+                client.execute(() -> {
+                    if (client.player != null) {
+                        client.player.sendSystemMessage(
+                            Component.literal("disabling reserved-slots for this world since it's not loaded on server")
+                        );
+                    }
+                });
+            }
+        });
+
         // Clear client cache when disconnecting from a world
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             ReservedSlotsMod.LOGGER.info("Disconnecting from world, clearing client slot cache");
@@ -47,6 +66,13 @@ public class ClientInitializer implements ClientModInitializer {
             "key.reservedslots.toggle",
             InputConstants.Type.KEYSYM,
             GLFW.GLFW_KEY_R,
+            category
+        ));
+
+        openSettingsKey = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+            "key.reservedslots.openSettings",
+            InputConstants.Type.KEYSYM,
+            InputConstants.UNKNOWN.getValue(),
             category
         ));
         
@@ -77,6 +103,9 @@ public class ClientInitializer implements ClientModInitializer {
                 ReservedSlotsMod.LOGGER.info("=== TOGGLE KEY PRESSED ===");
                 handleToggleKey(client);
             }
+            if (openSettingsKey.consumeClick()) {
+                client.setScreen(new ReservedSlotsConfigScreen(client.screen));
+            }
         });
         
         // Register HUD rendering for hotbar overlays (ghost items and lock icons)
@@ -84,7 +113,7 @@ public class ClientInitializer implements ClientModInitializer {
             Identifier.fromNamespaceAndPath("reservedslots", "hotbar_overlay"),
             (extractor, deltaTracker) -> {
                 Minecraft client = Minecraft.getInstance();
-                if (client.player != null && client.screen == null) {
+                if (client.player != null && client.screen == null && ClientSlotDataCache.isServerCompatible()) {
                     renderHotbarOverlays(extractor, client);
                 }
             }
@@ -112,6 +141,9 @@ public class ClientInitializer implements ClientModInitializer {
      * Handles the toggle key when pressed in an AbstractContainerScreen (inventory).
      */
     private void handleToggleKeyInScreen(AbstractContainerScreen<?> screen) {
+        if (!ClientSlotDataCache.isServerCompatible()) {
+            return;
+        }
         Minecraft client = Minecraft.getInstance();
         if (client.player == null) {
             ReservedSlotsMod.LOGGER.info("Player is null in handleToggleKeyInScreen");
@@ -142,6 +174,9 @@ public class ClientInitializer implements ClientModInitializer {
      * Renders overlays for reserved and locked slots.
      */
     private void renderSlotOverlays(GuiGraphicsExtractor extractor, AbstractContainerScreen<?> screen) {
+        if (!ClientSlotDataCache.isServerCompatible()) {
+            return;
+        }
         Minecraft client = Minecraft.getInstance();
         if (client.player == null) {
             return;

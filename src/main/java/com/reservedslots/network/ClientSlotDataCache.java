@@ -14,6 +14,7 @@ import java.util.Map;
  */
 public class ClientSlotDataCache {
     private static final Map<Integer, CachedSlotData> slotData = new HashMap<>();
+    private static boolean serverHasMod = true;
 
     public static class CachedSlotData {
         public final SlotState state;
@@ -37,6 +38,15 @@ public class ClientSlotDataCache {
 
     public static void clear() {
         slotData.clear();
+        serverHasMod = true;
+    }
+
+    public static boolean isServerCompatible() {
+        return serverHasMod;
+    }
+
+    public static void setServerHasMod(boolean value) {
+        serverHasMod = value;
     }
 
     public static boolean isReserved(int slotIndex) {

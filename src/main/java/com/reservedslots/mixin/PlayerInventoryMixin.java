@@ -1,5 +1,6 @@
 package com.reservedslots.mixin;
 
+import com.reservedslots.config.ModConfig;
 import com.reservedslots.server.ReservedSlotManager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.player.Inventory;
@@ -148,21 +149,40 @@ public abstract class PlayerInventoryMixin {
     /**
      * Intercepts getEmptySlot to skip locked/reserved slots unless appropriate.
      * This prevents default Minecraft code from using locked/reserved slots.
+     * When "Pickup to Inventory" is enabled, main inventory slots (9-35) are preferred
+     * over hotbar slots (0-8) for new item pickups.
      */
     @Inject(method = "getFreeSlot", at = @At("HEAD"), cancellable = true)
     private void onGetEmptySlot(CallbackInfoReturnable<Integer> cir) {
-        // Find first empty slot that isn't locked or inappropriately reserved
-        for (int i = 0; i < 36; i++) {
-            ItemStack currentStack = getItem(i);
-            if (currentStack.isEmpty()) {
-                // Check if this is a normal slot (not reserved or locked)
-                if (ReservedSlotManager.isNormalSlot(player, i)) {
+        if (ModConfig.getInstance().isPickupToInventory()) {
+            // Prefer main inventory (slots 9-35) over hotbar (slots 0-8)
+            for (int i = 9; i < 36; i++) {
+                ItemStack currentStack = getItem(i);
+                if (currentStack.isEmpty() && ReservedSlotManager.isNormalSlot(player, i)) {
                     cir.setReturnValue(i);
                     return;
                 }
             }
+            for (int i = 0; i < 9; i++) {
+                ItemStack currentStack = getItem(i);
+                if (currentStack.isEmpty() && ReservedSlotManager.isNormalSlot(player, i)) {
+                    cir.setReturnValue(i);
+                    return;
+                }
+            }
+        } else {
+            // Default: scan slots 0-35 (hotbar first, then inventory)
+            for (int i = 0; i < 36; i++) {
+                ItemStack currentStack = getItem(i);
+                if (currentStack.isEmpty()) {
+                    if (ReservedSlotManager.isNormalSlot(player, i)) {
+                        cir.setReturnValue(i);
+                        return;
+                    }
+                }
+            }
         }
-        
+
         // No normal empty slots found, return -1
         cir.setReturnValue(-1);
     }

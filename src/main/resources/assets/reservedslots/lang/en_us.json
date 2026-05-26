@@ -1,4 +1,8 @@
 {
     "key.reservedslots.toggle": "Toggle Reserved Slot",
-    "key.category.reservedslots.reserved_slots": "Reserved Slots"
+    "key.reservedslots.openSettings": "Open Reserved Slots Settings",
+    "key.category.reservedslots.reserved_slots": "Reserved Slots",
+
+    "screen.reservedslots.config.title": "Reserved Slots Settings",
+    "option.reservedslots.pickupToInventory": "Pickup to Inventory: %s"
 }
