@@ -12,6 +12,7 @@ import net.minecraft.server.level.ServerPlayer;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -131,6 +132,84 @@ public class ReservedSlotManager {
         for (int i = 0; i < 41; i++) {
             ReservedSlotData data = slots.get(i);
             if (data != null && data.getState() == SlotState.RESERVED && data.matches(stack)) {
+                ItemStack currentStack = player.getInventory().getItem(i);
+                if (currentStack.isEmpty()) return i;
+            }
+        }
+
+        return -1;
+    }
+
+    /**
+     * Finds the best matching reserved or locked slot for an item, restricted to a set of
+     * allowed inventory slot indices. Used by shift-click transfer to avoid routing an item
+     * to a slot that is outside the target destination range.
+     */
+    public static int findMatchingReservedOrLockedSlotInRange(Player player, ItemStack stack, Set<Integer> allowedInvSlots) {
+        UUID playerId = player.getUUID();
+        Map<Integer, ReservedSlotData> slots = playerData.get(playerId);
+
+        if (slots == null) return -1;
+
+        // 1. Occupied locked slots (matching)
+        for (int i : allowedInvSlots) {
+            ReservedSlotData data = slots.get(i);
+            if (data != null && data.getState() == SlotState.LOCKED && data.matches(stack)) {
+                ItemStack currentStack = player.getInventory().getItem(i);
+                if (!currentStack.isEmpty() &&
+                        ItemStack.isSameItemSameComponents(currentStack, stack) &&
+                        currentStack.getCount() < currentStack.getMaxStackSize()) {
+                    return i;
+                }
+            }
+        }
+
+        // 2. Occupied reserved slots (matching)
+        for (int i : allowedInvSlots) {
+            ReservedSlotData data = slots.get(i);
+            if (data != null && data.getState() == SlotState.RESERVED && data.matches(stack)) {
+                ItemStack currentStack = player.getInventory().getItem(i);
+                if (!currentStack.isEmpty() &&
+                        ItemStack.isSameItemSameComponents(currentStack, stack) &&
+                        currentStack.getCount() < currentStack.getMaxStackSize()) {
+                    return i;
+                }
+            }
+        }
+
+        // 3. Empty locked slots (matching)
+        for (int i : allowedInvSlots) {
+            ReservedSlotData data = slots.get(i);
+            if (data != null && data.getState() == SlotState.LOCKED && data.matches(stack)) {
+                ItemStack currentStack = player.getInventory().getItem(i);
+                if (currentStack.isEmpty()) return i;
+            }
+        }
+
+        // 4. Empty reserved slots (matching)
+        for (int i : allowedInvSlots) {
+            ReservedSlotData data = slots.get(i);
+            if (data != null && data.getState() == SlotState.RESERVED && data.matches(stack)) {
+                ItemStack currentStack = player.getInventory().getItem(i);
+                if (currentStack.isEmpty()) return i;
+            }
+        }
+
+        return -1;
+    }
+
+    /**
+     * Finds an empty reserved slot as a fallback, restricted to a set of allowed inventory slot indices.
+     */
+    public static int findEmptyReservedSlotInRange(Player player, Set<Integer> allowedInvSlots) {
+        UUID playerId = player.getUUID();
+        Map<Integer, ReservedSlotData> slots = playerData.get(playerId);
+
+        if (slots == null) return -1;
+
+        for (int i : allowedInvSlots) {
+            ReservedSlotData data = slots.get(i);
+            if (data != null && data.getState() == SlotState.RESERVED) {
                 ItemStack currentStack = player.getInventory().getItem(i);
                 if (currentStack.isEmpty()) return i;
             }
