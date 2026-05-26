@@ -55,7 +55,12 @@ jobs:
           CHANGELOG: ${{ env.CHANGELOG }}
 
       - name: Sync description to Modrinth
-        run: ./gradlew modrinthSyncBody
+        run: |
+          BODY=$(cat README.md)
+          curl --fail -X PATCH "https://api.modrinth.com/v2/project/reserved-slots" \
+            -H "Authorization: ${{ secrets.MODRINTH_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n --rawfile body README.md '{body: $body}')"
         env:
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
 
