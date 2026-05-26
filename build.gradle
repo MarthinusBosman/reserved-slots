@@ -70,5 +70,6 @@ modrinth {
     changelog = System.getenv("CHANGELOG") ?: "Release ${project.version}"
     dependencies {
         required.project("fabric-api")
+        required.project("modmenu")
     }
 }
