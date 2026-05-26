@@ -65,7 +65,7 @@ modrinth {
     versionNumber = project.version as String
     versionType = "release"
     uploadFile = tasks.jar
-    gameVersions.add("26.1")
+    gameVersions.add("26.1.x")
     loaders.add("fabric")
     changelog = System.getenv("CHANGELOG") ?: "Release ${project.version}"
     dependencies {
